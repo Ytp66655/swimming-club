@@ -236,21 +236,18 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// Simple no-auth data store using a public JSON API
-// Each check-in/draw sends a POST to update, and GET to read
-// No token needed for anyone!
-
-const DATA_URL = 'https://jsonblob.com/api/jsonBlob/019d7059-3a8b-78df-9c05-02e07a515c4f';
+// Cloudflare Worker API (CORS enabled, no token on client)
+const API_URL = 'https://swimming-club-api.ytp66655.workers.dev/api/data';
 
 let cachedData = null;
 
 async function loadData() {
   const syncBar = document.getElementById('syncBar');
-  syncBar.textContent = '⏳ 加载数据中…';
+  syncBar.textContent = '⏳ 加载数据…';
   syncBar.className = 'sync-bar loading';
   syncBar.style.display = 'block';
   try {
-    const resp = await fetch(DATA_URL + '?t=' + Date.now(), { cache: 'no-store' });
+    const resp = await fetch(API_URL + '?t=' + Date.now());
     if (resp.ok) {
       cachedData = await resp.json();
       syncBar.className = 'sync-bar';
@@ -261,47 +258,39 @@ async function loadData() {
   if (cachedData) return cachedData;
   cachedData = { members: MEMBERS, checkins: [], draws: [] };
   syncBar.className = 'sync-bar error';
-  syncBar.textContent = '⚠️ 数据加载失败';
+  syncBar.textContent = '⚠️ 加载失败';
   setTimeout(() => { syncBar.className = 'sync-bar'; syncBar.style.display = 'none'; }, 3000);
   return cachedData;
 }
 
-// Use XMLHttpRequest instead of fetch to avoid CORS issues on PUT
-function saveData(data) {
+async function saveData(data) {
   cachedData = data;
   const syncBar = document.getElementById('syncBar');
   syncBar.textContent = '💾 保存中…';
   syncBar.className = 'sync-bar loading';
   syncBar.style.display = 'block';
-
-  return new Promise((resolve) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('PUT', DATA_URL, true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.onreadystatechange = function() {
-      if (xhr.readyState === 4) {
-        if (xhr.status === 200) {
-          syncBar.className = 'sync-bar';
-          syncBar.style.display = 'none';
-          resolve(true);
-        } else {
-          console.error('saveData XHR failed:', xhr.status, xhr.responseText);
-          syncBar.className = 'sync-bar error';
-          syncBar.textContent = '⚠️ 保存失败 (HTTP ' + xhr.status + ')';
-          setTimeout(() => { syncBar.className = 'sync-bar'; syncBar.style.display = 'none'; }, 3000);
-          resolve(false);
-        }
-      }
-    };
-    xhr.onerror = function() {
-      console.error('saveData network error');
-      syncBar.className = 'sync-bar error';
-      syncBar.textContent = '⚠️ 网络错误';
-      setTimeout(() => { syncBar.className = 'sync-bar'; syncBar.style.display = 'none'; }, 3000);
-      resolve(false);
-    };
-    xhr.send(JSON.stringify(data));
-  });
+  try {
+    const resp = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    const result = await resp.json();
+    if (resp.ok && result.success) {
+      syncBar.className = 'sync-bar';
+      syncBar.style.display = 'none';
+      return true;
+    }
+    syncBar.className = 'sync-bar error';
+    syncBar.textContent = '⚠️ 保存失败';
+    setTimeout(() => { syncBar.className = 'sync-bar'; syncBar.style.display = 'none'; }, 3000);
+    return false;
+  } catch(e) {
+    syncBar.className = 'sync-bar error';
+    syncBar.textContent = '⚠️ 网络错误';
+    setTimeout(() => { syncBar.className = 'sync-bar'; syncBar.style.display = 'none'; }, 3000);
+    return false;
+  }
 }
 // ========== APP STATE ==========
 const MEMBERS = [
