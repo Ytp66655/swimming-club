@@ -236,19 +236,85 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ========== JSONBLOB STORAGE (free, no signup) ==========
-const BLOB_ID = '019d7059-3a8b-78df-9c05-02e07a515c4f';
-const BLOB_READ = 'https://jsonblob.com/api/jsonBlob/' + BLOB_ID;
-const BLOB_WRITE = BLOB_READ;
+// ========== GITHUB STORAGE (token in localStorage, never in code) ==========
+// Token is stored in localStorage. On first visit, user pastes their GitHub PAT.
+// Token is ONLY used for API reads/writes — never committed to code.
+
+const GH_TOKEN_KEY = 'swimming_club_token';
+const GH_REPO = 'Ytp66655/swimming-club';
+const GH_BRANCH = 'main';
+const GH_DATA_PATH = 'data.json';
+const GH_RAW = `https://raw.githubusercontent.com/${GH_REPO}/${GH_BRANCH}/${GH_DATA_PATH}`;
+const GH_API = `https://api.github.com/repos/${GH_REPO}/contents/${GH_DATA_PATH}`;
 
 let cachedData = null;
+
+function getToken() { return localStorage.getItem(GH_TOKEN_KEY); }
+function setToken(t) { localStorage.setItem(GH_TOKEN_KEY, t); }
+function hasToken() { return !!getToken(); }
+
+function ghHeaders(extra) {
+  const t = getToken();
+  return {
+    'Authorization': 'Bearer ' + t,
+    'Accept': 'application/vnd.github.v3+json',
+    'Content-Type': 'application/json',
+    ...(extra || {})
+  };
+}
+
+async function ghFetch(url, options = {}) {
+  const resp = await fetch(url, { ...options, headers: ghHeaders(options.headers) });
+  if (!resp.ok) {
+    if (resp.status === 401 || resp.status === 403) {
+      showSetupPrompt('Token 无效或权限不足，请重新输入');
+    }
+    throw new Error('HTTP ' + resp.status);
+  }
+  return resp.json();
+}
+
+// Show token setup prompt
+function showSetupPrompt(msg) {
+  const overlay = document.getElementById('setupOverlay');
+  const msgEl = document.getElementById('setupMsg');
+  msgEl.textContent = msg || '首次使用，请输入您的 GitHub Token';
+  overlay.classList.add('show');
+}
+
+function hideSetupPrompt() {
+  document.getElementById('setupOverlay').classList.remove('show');
+}
+
+function initTokenFromURL() {
+  // Check if token was passed via URL hash (e.g. #token=ghp_xxx)
+  const hash = window.location.hash;
+  if (hash.startsWith('#token=')) {
+    const token = hash.substring(7);
+    setToken(token);
+    // Remove hash from URL without reload
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    return true;
+  }
+  return hasToken();
+}
 
 async function loadData() {
   const syncBar = document.getElementById('syncBar');
   syncBar.textContent = '⏳ 加载数据中…';
   syncBar.className = 'sync-bar loading';
+  syncBar.style.display = 'block';
+
+  if (!hasToken()) {
+    cachedData = { members: MEMBERS, checkins: [], draws: [] };
+    syncBar.className = 'sync-bar error';
+    syncBar.textContent = '⚠️ 需要设置 Token';
+    showSetupPrompt();
+    return cachedData;
+  }
+
   try {
-    const resp = await fetch(BLOB_READ + '?t=' + Date.now(), { cache: 'no-store' });
+    const resp = await fetch(GH_RAW + '?t=' + Date.now(), { cache: 'no-store' });
     if (resp.ok) {
       cachedData = await resp.json();
       syncBar.className = 'sync-bar';
@@ -256,10 +322,11 @@ async function loadData() {
       return cachedData;
     }
   } catch(e) { console.warn('loadData failed:', e); }
+
   if (cachedData) return cachedData;
   cachedData = { members: MEMBERS, checkins: [], draws: [] };
   syncBar.className = 'sync-bar error';
-  syncBar.textContent = '⚠️ 数据加载失败，显示缓存';
+  syncBar.textContent = '⚠️ 数据加载失败';
   setTimeout(() => { syncBar.className = 'sync-bar'; syncBar.style.display = 'none'; }, 3000);
   return cachedData;
 }
@@ -270,20 +337,40 @@ async function saveData(data) {
   syncBar.textContent = '💾 保存中…';
   syncBar.className = 'sync-bar loading';
   syncBar.style.display = 'block';
+
+  if (!hasToken()) {
+    syncBar.className = 'sync-bar error';
+    syncBar.textContent = '⚠️ 需要 Token 才能保存';
+    showSetupPrompt();
+    return false;
+  }
+
   try {
-    const resp = await fetch(BLOB_WRITE, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    if (!resp.ok) throw new Error('PUT failed');
+    // Get current SHA
+    let sha = null;
+    try {
+      const info = await ghFetch(GH_API);
+      sha = info.sha;
+    } catch(e) { /* file may not exist */ }
+
+    // Commit
+    const contentStr = JSON.stringify(data, null, 2);
+    const contentB64 = btoa(unescape(encodeURIComponent(contentStr)));
+    const body = {
+      message: 'Update data: ' + new Date().toISOString(),
+      content: contentB64,
+      branch: GH_BRANCH
+    };
+    if (sha) body.sha = sha;
+
+    await ghFetch(GH_API, { method: 'PUT', body: JSON.stringify(body) });
     syncBar.className = 'sync-bar';
     syncBar.style.display = 'none';
     return true;
   } catch(e) {
     console.error('saveData failed:', e);
     syncBar.className = 'sync-bar error';
-    syncBar.textContent = '⚠️ 保存失败，请重试';
+    syncBar.textContent = '⚠️ 保存失败，请检查 Token';
     setTimeout(() => { syncBar.className = 'sync-bar'; syncBar.style.display = 'none'; }, 3000);
     return false;
   }
@@ -313,7 +400,14 @@ document.querySelectorAll('.tab').forEach(tab => {
     if (panel) panel.classList.add('active');
     if (tab.dataset.tab === 'checkin') renderCheckin();
     if (tab.dataset.tab === 'records') renderRecords();
-    if (tab.dataset.tab === 'lottery') { renderLotteryInfo(); startBubbles(); }
+    if (tab.dataset.tab === 'lottery') {
+      // Reset lottery to idle state when switching tab
+      clearInterval(lotInterval);
+      lotState = 'idle';
+      updateLotBtn('idle');
+      renderLotteryInfo();
+      startBubbles();
+    }
   });
 });
 
@@ -366,7 +460,12 @@ document.getElementById('dialogConfirm').addEventListener('click', async () => {
 });
 
 // ========== LOTTERY ==========
-let rolling = false, rollInterval = null;
+// State machine: idle -> rolling[1-3] -> picked[1-3] -> done
+let lotState = 'idle';
+let lotInterval = null;
+let lotPool = [];
+let lotWinners = [];
+let lotDrawNum = 0; // 1, 2, or 3
 
 function getMonthlyPool() {
   const now = new Date(), m = now.getMonth(), y = now.getFullYear();
@@ -377,9 +476,11 @@ function getMonthlyPool() {
 
 function startBubbles() {
   const container = document.getElementById('bubbleContainer');
+  if (!container) return;
   if (container._bubbleTimer) clearInterval(container._bubbleTimer);
   container._bubbleTimer = setInterval(() => {
-    if (document.getElementById('lottery-panel').classList.contains('active')) {
+    const panel = document.getElementById('lottery-panel');
+    if (panel && panel.classList.contains('active')) {
       const b = document.createElement('div');
       b.className = 'bubble';
       b.style.width = b.style.height = (4 + Math.random() * 8) + 'px';
@@ -394,17 +495,18 @@ function startBubbles() {
 
 function spawnConfetti() {
   const wrap = document.getElementById('confettiWrap');
+  if (!wrap) return;
   const colors = ['#f97316','#fbbf24','#22c55e','#3b82f6','#a855f7','#ec4899','#14b8a6'];
-  for (let i = 0; i < 60; i++) {
+  for (let i = 0; i < 80; i++) {
     const p = document.createElement('div');
     p.className = 'confetti-piece';
     p.style.left = Math.random() * 100 + '%';
     p.style.background = colors[Math.floor(Math.random() * colors.length)];
-    p.style.animationDelay = Math.random() * 1 + 's';
-    p.style.animationDuration = (2 + Math.random() * 2) + 's';
+    p.style.animationDelay = Math.random() * 1.5 + 's';
+    p.style.animationDuration = (2.5 + Math.random() * 2) + 's';
     p.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
     wrap.appendChild(p);
-    setTimeout(() => p.remove(), 5000);
+    setTimeout(() => p.remove(), 6000);
   }
 }
 
@@ -418,33 +520,120 @@ function renderLotteryInfo() {
   else { c.innerHTML = draws.map(d => `<div class="record-item draw"><div class="record-date">${d.date}</div><div class="record-detail">🐟 ${d.winners.join(' · ')}</div></div>`).join(''); }
 }
 
+function updateLotBtn(state) {
+  const btn = document.getElementById('lotteryBtn');
+  const roller = document.getElementById('nameRoller');
+  const winnersSection = document.getElementById('winnersSection');
+  const winnersList = document.getElementById('winnersList');
+
+  if (state === 'idle') {
+    btn.textContent = '开\n始';
+    btn.disabled = false;
+    roller.textContent = '点击按钮开始抽奖';
+    roller.classList.remove('rolling');
+    winnersSection.style.display = 'none';
+    winnersList.innerHTML = '';
+    lotWinners = [];
+    lotDrawNum = 0;
+  } else if (state.startsWith('rolling')) {
+    btn.textContent = '停！';
+    btn.disabled = false;
+    roller.classList.add('rolling');
+  } else if (state === 'picked_1') {
+    btn.textContent = '下一\n位';
+    btn.disabled = false;
+    roller.classList.remove('rolling');
+    roller.textContent = lotWinners[0] + ' 🎉';
+    winnersSection.style.display = 'block';
+    const badge = document.createElement('span');
+    badge.className = 'winner-badge';
+    badge.textContent = '第1位 ' + lotWinners[0];
+    badge.style.animation = 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    winnersList.appendChild(badge);
+  } else if (state === 'picked_2') {
+    btn.textContent = '最后\n一位';
+    btn.disabled = false;
+    const badge = document.createElement('span');
+    badge.className = 'winner-badge';
+    badge.textContent = '第2位 ' + lotWinners[1];
+    badge.style.animation = 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    winnersList.appendChild(badge);
+  } else if (state === 'done') {
+    btn.textContent = '再抽\n一次';
+    btn.disabled = false;
+    roller.textContent = '🎉 全部揭晓！';
+    const badge = document.createElement('span');
+    badge.className = 'winner-badge';
+    badge.textContent = '第3位 ' + lotWinners[2];
+    badge.style.animation = 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    winnersList.appendChild(badge);
+    spawnConfetti();
+  }
+}
+
 document.getElementById('lotteryBtn').addEventListener('click', async () => {
-  if (rolling) {
-    clearInterval(rollInterval); rolling = false;
-    const pool = getMonthlyPool();
+  const pool = getMonthlyPool();
+  const minNeeded = 3 - lotDrawNum;
+
+  if (lotState === 'idle') {
+    // Start new lottery
     if (pool.length < 3) { showToast('签到池不足3人，请先签到'); return; }
-    const shuffled = [...pool];
-    for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; }
-    const winners = shuffled.slice(0, 3);
-    document.getElementById('nameRoller').textContent = '🎉 恭喜！';
-    document.getElementById('nameRoller').classList.remove('rolling');
-    document.getElementById('winnersSection').style.display = 'block';
-    document.getElementById('winnersList').innerHTML = winners.map(w => `<span class="winner-badge">${w}</span>`).join('');
-    appData.draws.push({ date: todayStr(), pool, winners, count: 3 });
-    const ok = await saveData(appData);
-    if (ok) spawnConfetti();
-    renderLotteryInfo();
-    document.getElementById('lotteryBtn').textContent = '再抽\n一次';
-  } else {
-    const pool = getMonthlyPool();
-    if (pool.length < 3) { showToast('签到池不足3人，请先签到'); return; }
-    rolling = true;
+    lotPool = [...pool];
+    lotWinners = [];
+    lotDrawNum = 0;
     document.getElementById('winnersSection').style.display = 'none';
-    document.getElementById('nameRoller').textContent = '';
-    document.getElementById('nameRoller').classList.add('rolling');
-    document.getElementById('lotteryBtn').textContent = '停！';
+    document.getElementById('winnersList').innerHTML = '';
+    lotState = 'rolling_1';
+    updateLotBtn('rolling_1');
     let idx = 0;
-    rollInterval = setInterval(() => { document.getElementById('nameRoller').textContent = pool[idx % pool.length]; idx++; }, 80);
+    lotInterval = setInterval(() => {
+      document.getElementById('nameRoller').textContent = lotPool[idx % lotPool.length];
+      idx++;
+    }, 80);
+
+  } else if (lotState.startsWith('rolling')) {
+    // Stop rolling, pick winner
+    clearInterval(lotInterval);
+    lotState = lotState.replace('rolling', 'picked');
+    // Fisher-Yates shuffle on remaining pool
+    const rem = [...lotPool];
+    for (let i = rem.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [rem[i], rem[j]] = [rem[j], rem[i]];
+    }
+    const winner = rem[0];
+    lotWinners.push(winner);
+    lotPool = lotPool.filter(n => n !== winner); // Remove from pool for next draw
+    lotDrawNum++;
+    updateLotBtn('picked_' + lotDrawNum);
+    lotState = 'picked_' + lotDrawNum;
+
+  } else if (lotState.startsWith('picked')) {
+    if (lotDrawNum === 1) {
+      lotState = 'rolling_2';
+      updateLotBtn('rolling_2');
+      let idx = 0;
+      lotInterval = setInterval(() => {
+        document.getElementById('nameRoller').textContent = lotPool[idx % lotPool.length];
+        idx++;
+      }, 80);
+    } else if (lotDrawNum === 2) {
+      lotState = 'rolling_3';
+      updateLotBtn('rolling_3');
+      let idx = 0;
+      lotInterval = setInterval(() => {
+        document.getElementById('nameRoller').textContent = lotPool[idx % lotPool.length];
+        idx++;
+      }, 80);
+    } else if (lotDrawNum === 3) {
+      // All done
+      lotState = 'done';
+      updateLotBtn('done');
+      appData.draws.push({ date: todayStr(), pool: getMonthlyPool(), winners: [...lotWinners], count: 3 });
+      await saveData(appData);
+      renderLotteryInfo();
+      lotState = 'idle';
+    }
   }
 });
 
@@ -499,9 +688,24 @@ async function init() {
   renderCheckin();
   renderLotteryInfo();
   startBubbles();
+  // Reset lottery state
+  lotState = 'idle';
+  updateLotBtn('idle');
 }
 init();
 </script>
 
+<!-- Token Setup Overlay -->
+<div id="setupOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:999;align-items:center;justify-content:center;padding:24px">
+  <div style="background:#fff;border-radius:16px;padding:32px;width:100%;max-width:400px;text-align:center">
+    <div style="font-size:48px;margin-bottom:16px">🔑</div>
+    <h2 style="font-size:18px;margin-bottom:8px">首次设置</h2>
+    <p id="setupMsg" style="font-size:13px;color:#64748b;margin-bottom:20px">请输入您的 GitHub Personal Access Token</p>
+    <textarea id="tokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="width:100%;height:80px;padding:12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:monospace;resize:none;box-sizing:border-box;margin-bottom:12px"></textarea>
+    <p style="font-size:11px;color:#94a3b8;text-align:left;margin-bottom:16px">Token 将保存在您本地浏览器中，不会发送到任何服务器。<br>需要 repo 权限来读写数据。</p>
+    <button id="saveTokenBtn" style="width:100%;padding:12px;background:#0077b6;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;margin-bottom:8px">确认保存</button>
+    <button id="skipTokenBtn" style="width:100%;padding:10px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:13px;cursor:pointer">暂时跳过（仅本地模式）</button>
+  </div>
+</div>
 </body>
 </html>
