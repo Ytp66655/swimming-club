@@ -24,30 +24,39 @@
     .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
     .card-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 
-    .date-input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 16px; margin-bottom: 12px; }
-    .members-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 16px; }
-    .member-chip { padding: 10px 8px; border-radius: 8px; background: #f1f5f9; text-align: center; font-size: 14px; cursor: pointer; transition: all 0.15s; border: 2px solid transparent; -webkit-user-select: none; user-select: none; }
-    .member-chip.selected { background: #dbeafe; border-color: #0077b6; color: #0077b6; font-weight: 600; }
-    .member-chip:active { transform: scale(0.96); }
-    .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
-    .btn-primary { background: #0077b6; color: #fff; }
-    .btn-primary:active { background: #005f8a; }
-    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
-    .btn-select-all { background: #e0f2fe; color: #0077b6; font-size: 13px; padding: 8px 16px; width: auto; border-radius: 20px; margin-bottom: 12px; }
-    .btn-select-all:active { background: #bae6fd; }
-    .selected-count { text-align: center; font-size: 13px; color: #64748b; margin-bottom: 12px; }
+    /* Check-in: single tap */
+    .date-label { font-size: 14px; color: #64748b; margin-bottom: 12px; text-align: center; }
+    .checkin-status { text-align: center; font-size: 13px; color: #64748b; margin-bottom: 16px; }
+    .members-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .member-tap { padding: 14px 8px; border-radius: 10px; background: #f1f5f9; text-align: center; font-size: 15px; cursor: pointer; transition: all 0.15s; border: 2px solid transparent; -webkit-user-select: none; user-select: none; position: relative; }
+    .member-tap:active { transform: scale(0.96); }
+    .member-tap.checked-in { background: #dcfce7; border-color: #22c55e; color: #16a34a; }
+    .member-tap.checked-in::after { content: '✅'; position: absolute; top: 4px; right: 8px; font-size: 12px; }
+    .member-tap.pending { background: #f1f5f9; color: #1a1a2e; }
+    .member-tap.pending:active { background: #e0f2fe; }
 
+    /* Confirm dialog */
+    .dialog-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; align-items: center; justify-content: center; padding: 24px; }
+    .dialog-overlay.show { display: flex; }
+    .dialog { background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 320px; text-align: center; }
+    .dialog-name { font-size: 24px; font-weight: 700; margin: 12px 0 8px; }
+    .dialog-date { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+    .dialog-btns { display: flex; gap: 8px; }
+    .dialog-btn { flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; }
+    .dialog-btn.confirm { background: #0077b6; color: #fff; }
+    .dialog-btn.cancel { background: #f1f5f9; color: #64748b; }
+    .dialog-btn:active { opacity: 0.8; }
+
+    /* Lottery */
     .lottery-stage { text-align: center; padding: 40px 16px; }
-    .lottery-names { font-size: 28px; font-weight: 700; color: #0077b6; margin: 20px 0; min-height: 44px; transition: all 0.1s; }
-    .lottery-names.rolling { animation: roll 0.1s infinite alternate; }
-    @keyframes roll { 0% { opacity: 1; } 100% { opacity: 0.5; } }
+    .lottery-names { font-size: 28px; font-weight: 700; color: #0077b6; margin: 20px 0; min-height: 44px; }
     .lottery-btn { width: 200px; height: 200px; border-radius: 50%; border: 4px solid #0077b6; background: linear-gradient(135deg, #f0f9ff, #e0f2fe); font-size: 20px; font-weight: 700; color: #0077b6; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 20px rgba(0,119,182,0.2); -webkit-user-select: none; user-select: none; }
-    .lottery-btn:active { transform: scale(0.95); box-shadow: 0 2px 10px rgba(0,119,182,0.3); }
-    .lottery-btn:disabled { border-color: #94a3b8; color: #94a3b8; cursor: not-allowed; }
+    .lottery-btn:active { transform: scale(0.95); }
     .winners-list { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px; }
     .winner-badge { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; padding: 10px 24px; border-radius: 24px; font-size: 18px; font-weight: 700; box-shadow: 0 2px 8px rgba(245,158,11,0.3); }
     .lottery-info { font-size: 13px; color: #64748b; margin-top: 16px; }
 
+    /* Records */
     .record-item { padding: 12px; background: #fff; border-radius: 10px; margin-bottom: 8px; border-left: 4px solid #0077b6; }
     .record-item.draw { border-left-color: #f59e0b; }
     .record-date { font-size: 12px; color: #94a3b8; }
@@ -56,7 +65,7 @@
     .empty { text-align: center; padding: 40px 16px; color: #94a3b8; }
     .empty-icon { font-size: 48px; margin-bottom: 12px; }
 
-    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; padding: 10px 24px; border-radius: 20px; font-size: 14px; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; padding: 10px 24px; border-radius: 20px; font-size: 14px; z-index: 400; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
     .toast.show { opacity: 1; }
 
     @media (min-width: 768px) {
@@ -84,18 +93,10 @@
   <!-- CHECK-IN PANEL -->
   <div class="panel active" id="checkin">
     <div class="card">
-      <div class="card-title">📝 新增签到</div>
-      <input type="date" class="date-input" id="checkinDate">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <span class="selected-count" id="selectedCount" style="margin:0">已选 0 人</span>
-        <button class="btn btn-select-all" id="selectAllBtn">全选</button>
-      </div>
-      <div class="members-grid" id="checkinGrid"></div>
-      <button class="btn btn-primary" id="submitCheckin" disabled>确认签到</button>
-    </div>
-    <div class="card">
-      <div class="card-title">📅 本月签到</div>
-      <div id="monthlyCheckins"></div>
+      <div class="card-title">📝 今日签到</div>
+      <div class="date-label" id="todayDate"></div>
+      <div class="checkin-status" id="checkinStatus"></div>
+      <div class="members-grid" id="membersGrid"></div>
     </div>
   </div>
 
@@ -107,7 +108,7 @@
         <div class="lottery-names" id="lotteryDisplay">点击开始抽奖</div>
         <button class="lottery-btn" id="lotteryBtn">开始<br>抽奖</button>
         <div class="winners-list" id="winnersList"></div>
-        <div class="lottery-info" id="lotteryInfo">抽奖池：本月签到成员</div>
+        <div class="lottery-info" id="lotteryInfo"></div>
       </div>
     </div>
     <div class="card">
@@ -130,6 +131,19 @@
 
 </div>
 
+<!-- Confirm Dialog -->
+<div class="dialog-overlay" id="dialogOverlay">
+  <div class="dialog">
+    <div style="font-size:32px">🏊</div>
+    <div class="dialog-name" id="dialogName"></div>
+    <div class="dialog-date" id="dialogDate"></div>
+    <div class="dialog-btns">
+      <button class="dialog-btn cancel" id="dialogCancel">取消</button>
+      <button class="dialog-btn confirm" id="dialogConfirm">确认签到</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -143,12 +157,16 @@ const STORAGE_KEY = 'swimming_club';
 
 function loadData() {
   try { const r = localStorage.getItem(STORAGE_KEY); if (r) return JSON.parse(r); } catch(e) {}
-  return { members: MEMBERS, checkins: [], draws: [] };
+  return { checkins: [], draws: [] };
 }
 function saveData(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
 let data = loadData();
-// Force update members list
-data.members = MEMBERS;
+
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+
+function getTodayCheckin() {
+  return data.checkins.find(c => c.date === todayStr());
+}
 
 function showToast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
 
@@ -159,67 +177,69 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById(tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'checkin') renderCheckin();
     if (tab.dataset.tab === 'records') renderRecords();
     if (tab.dataset.tab === 'lottery') renderLotteryInfo();
   });
 });
 
 // ========== CHECK-IN ==========
-const selectedMembers = new Set();
+let pendingName = null;
 
-function renderCheckinGrid() {
-  const grid = document.getElementById('checkinGrid');
-  grid.innerHTML = data.members.map(name => {
-    const cls = selectedMembers.has(name) ? 'member-chip selected' : 'member-chip';
+function renderCheckin() {
+  const today = todayStr();
+  document.getElementById('todayDate').textContent = today;
+
+  const tc = getTodayCheckin();
+  const checkedIn = tc ? tc.attendees : [];
+
+  document.getElementById('checkinStatus').textContent =
+    `已签到 ${checkedIn.length} / ${MEMBERS.length} 人`;
+
+  const grid = document.getElementById('membersGrid');
+  grid.innerHTML = MEMBERS.map(name => {
+    const isChecked = checkedIn.includes(name);
+    const cls = isChecked ? 'member-tap checked-in' : 'member-tap pending';
     return `<div class="${cls}" data-name="${name}">${name}</div>`;
   }).join('');
-  document.getElementById('checkinDate').value = new Date().toISOString().split('T')[0];
-  grid.querySelectorAll('.member-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-      const name = chip.dataset.name;
-      if (selectedMembers.has(name)) { selectedMembers.delete(name); chip.classList.remove('selected'); }
-      else { selectedMembers.add(name); chip.classList.add('selected'); }
-      updateCheckinCount();
+
+  grid.querySelectorAll('.member-tap').forEach(el => {
+    el.addEventListener('click', () => {
+      const name = el.dataset.name;
+      if (el.classList.contains('checked-in')) {
+        showToast(`${name} 已签到`);
+        return;
+      }
+      pendingName = name;
+      document.getElementById('dialogName').textContent = name;
+      document.getElementById('dialogDate').textContent = today;
+      document.getElementById('dialogOverlay').classList.add('show');
     });
   });
 }
 
-function updateCheckinCount() {
-  document.getElementById('selectedCount').textContent = `已选 ${selectedMembers.size} 人`;
-  document.getElementById('submitCheckin').disabled = selectedMembers.size === 0;
-  document.getElementById('selectAllBtn').textContent = selectedMembers.size === data.members.length ? '取消全选' : '全选';
-}
+document.getElementById('dialogCancel').addEventListener('click', () => {
+  document.getElementById('dialogOverlay').classList.remove('show');
+  pendingName = null;
+});
 
-document.getElementById('selectAllBtn').addEventListener('click', () => {
-  if (selectedMembers.size === data.members.length) {
-    selectedMembers.clear();
-  } else {
-    data.members.forEach(m => selectedMembers.add(m));
+document.getElementById('dialogConfirm').addEventListener('click', () => {
+  if (!pendingName) return;
+  const today = todayStr();
+  let tc = data.checkins.find(c => c.date === today);
+  if (!tc) {
+    tc = { date: today, attendees: [], note: '' };
+    data.checkins.push(tc);
   }
-  renderCheckinGrid();
-  updateCheckinCount();
+  if (!tc.attendees.includes(pendingName)) {
+    tc.attendees.push(pendingName);
+    saveData(data);
+  }
+  document.getElementById('dialogOverlay').classList.remove('show');
+  showToast(`${pendingName} 签到成功！`);
+  pendingName = null;
+  renderCheckin();
 });
-
-document.getElementById('submitCheckin').addEventListener('click', () => {
-  const date = document.getElementById('checkinDate').value;
-  if (!date) { showToast('请选择日期'); return; }
-  if (selectedMembers.size === 0) { showToast('请至少选择一人'); return; }
-  data.checkins.push({ date, attendees: [...selectedMembers], note: '' });
-  saveData(data);
-  selectedMembers.clear();
-  renderCheckinGrid();
-  updateCheckinCount();
-  renderMonthlyCheckins();
-  showToast('签到成功！');
-});
-
-function renderMonthlyCheckins() {
-  const c = document.getElementById('monthlyCheckins');
-  const now = new Date(), m = now.getMonth(), y = now.getFullYear();
-  const monthly = data.checkins.filter(x => { const d = new Date(x.date); return d.getMonth() === m && d.getFullYear() === y; }).sort((a, b) => new Date(b.date) - new Date(a.date));
-  if (!monthly.length) { c.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>本月暂无签到记录</div>'; return; }
-  c.innerHTML = monthly.map(x => `<div class="record-item"><div class="record-date">${x.date}</div><div class="record-detail">${x.attendees.length} 人：${x.attendees.join('、')}</div></div>`).join('');
-}
 
 // ========== LOTTERY ==========
 let rolling = false, rollInterval = null;
@@ -245,13 +265,13 @@ document.getElementById('lotteryBtn').addEventListener('click', () => {
   if (rolling) {
     clearInterval(rollInterval); rolling = false;
     const pool = getMonthlyPool();
-    if (pool.length < 3) { showToast('抽奖池不足3人'); document.getElementById('lotteryDisplay').textContent = '抽奖池不足3人'; return; }
+    if (pool.length < 3) { showToast('抽奖池不足3人'); return; }
     const shuffled = [...pool];
     for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; }
     const winners = shuffled.slice(0, 3);
     document.getElementById('lotteryDisplay').textContent = '🎉 恭喜！';
     document.getElementById('winnersList').innerHTML = winners.map(w => `<span class="winner-badge">${w}</span>`).join('');
-    data.draws.push({ date: new Date().toISOString().split('T')[0], pool, winners, count: 3 });
+    data.draws.push({ date: todayStr(), pool, winners, count: 3 });
     saveData(data); renderLotteryInfo();
     document.getElementById('lotteryBtn').textContent = '再抽\n一次';
   } else {
@@ -283,9 +303,7 @@ function renderRecords() {
 }
 
 // ========== INIT ==========
-renderCheckinGrid();
-updateCheckinCount();
-renderMonthlyCheckins();
+renderCheckin();
 renderLotteryInfo();
 </script>
 
