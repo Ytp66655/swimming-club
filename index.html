@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>游泳社团签到 & 抽奖</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; background: #f0f4f8; color: #1a1a2e; min-height: 100vh; }
+
+    /* Header */
+    .header { background: linear-gradient(135deg, #0077b6, #00b4d8); color: #fff; padding: 20px 16px; text-align: center; }
+    .header h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .header p { font-size: 13px; opacity: 0.8; }
+
+    /* Tabs */
+    .tabs { display: flex; background: #fff; border-bottom: 1px solid #e2e8f0; position: sticky; top: 0; z-index: 100; }
+    .tab { flex: 1; padding: 12px 8px; text-align: center; font-size: 14px; font-weight: 600; color: #64748b; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; }
+    .tab.active { color: #0077b6; border-bottom-color: #0077b6; }
+    .tab:active { background: #f0f9ff; }
+
+    /* Content */
+    .content { padding: 16px; max-width: 800px; margin: 0 auto; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Cards */
+    .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .card-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+
+    /* Check-in */
+    .checkin-form { margin-bottom: 16px; }
+    .date-input { width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 16px; margin-bottom: 12px; }
+    .members-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin-bottom: 16px; }
+    .member-chip { padding: 10px 14px; border-radius: 8px; background: #f1f5f9; text-align: center; font-size: 14px; cursor: pointer; transition: all 0.15s; border: 2px solid transparent; -webkit-user-select: none; user-select: none; }
+    .member-chip.selected { background: #dbeafe; border-color: #0077b6; color: #0077b6; font-weight: 600; }
+    .member-chip:active { transform: scale(0.96); }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    .btn-primary { background: #0077b6; color: #fff; }
+    .btn-primary:active { background: #005f8a; }
+    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+    .btn-danger { background: #ef4444; color: #fff; }
+    .btn-outline { background: #fff; color: #0077b6; border: 2px solid #0077b6; }
+    .selected-count { text-align: center; font-size: 13px; color: #64748b; margin-bottom: 12px; }
+
+    /* Lottery */
+    .lottery-stage { text-align: center; padding: 40px 16px; }
+    .lottery-names { font-size: 28px; font-weight: 700; color: #0077b6; margin: 20px 0; min-height: 44px; transition: all 0.1s; }
+    .lottery-names.rolling { animation: roll 0.1s infinite alternate; }
+    @keyframes roll { 0% { opacity: 1; } 100% { opacity: 0.5; } }
+    .lottery-btn { width: 200px; height: 200px; border-radius: 50%; border: 4px solid #0077b6; background: linear-gradient(135deg, #f0f9ff, #e0f2fe); font-size: 20px; font-weight: 700; color: #0077b6; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 20px rgba(0,119,182,0.2); }
+    .lottery-btn:active { transform: scale(0.95); box-shadow: 0 2px 10px rgba(0,119,182,0.3); }
+    .lottery-btn:disabled { border-color: #94a3b8; color: #94a3b8; cursor: not-allowed; }
+    .winners-list { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 16px; }
+    .winner-badge { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; padding: 8px 20px; border-radius: 20px; font-size: 16px; font-weight: 700; }
+    .lottery-info { font-size: 13px; color: #64748b; margin-top: 16px; }
+
+    /* Records */
+    .record-item { padding: 12px; background: #fff; border-radius: 10px; margin-bottom: 8px; border-left: 4px solid #0077b6; }
+    .record-item.draw { border-left-color: #f59e0b; }
+    .record-date { font-size: 12px; color: #94a3b8; }
+    .record-detail { font-size: 14px; margin-top: 4px; }
+
+    /* Members */
+    .member-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #fff; border-radius: 8px; margin-bottom: 6px; }
+    .member-row .name { font-size: 15px; }
+    .member-row .delete-btn { color: #ef4444; cursor: pointer; font-size: 18px; padding: 4px 8px; }
+    .add-member-row { display: flex; gap: 8px; }
+    .add-member-row input { flex: 1; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 15px; }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 40px 16px; color: #94a3b8; }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; padding: 10px 24px; border-radius: 20px; font-size: 14px; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+
+    /* Responsive */
+    @media (min-width: 768px) {
+      .members-grid { grid-template-columns: repeat(4, 1fr); }
+      .lottery-btn { width: 260px; height: 260px; font-size: 24px; }
+      .lottery-names { font-size: 36px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏊 游泳社团管理</h1>
+  <p>签到 · 抽奖 · 记录</p>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="checkin">📝 签到</div>
+  <div class="tab" data-tab="lottery">🎰 抽奖</div>
+  <div class="tab" data-tab="records">📊 记录</div>
+  <div class="tab" data-tab="members">👥 成员</div>
+</div>
+
+<div class="content">
+
+  <!-- CHECK-IN PANEL -->
+  <div class="panel active" id="checkin">
+    <div class="card">
+      <div class="card-title">📝 新增签到</div>
+      <div class="checkin-form">
+        <input type="date" class="date-input" id="checkinDate">
+        <div class="selected-count" id="selectedCount">已选 0 人</div>
+        <div class="members-grid" id="checkinGrid"></div>
+        <button class="btn btn-primary" id="submitCheckin" disabled>确认签到</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📅 本月签到</div>
+      <div id="monthlyCheckins"></div>
+    </div>
+  </div>
+
+  <!-- LOTTERY PANEL -->
+  <div class="panel" id="lottery">
+    <div class="card">
+      <div class="card-title">🎰 月度抽奖</div>
+      <div class="lottery-stage">
+        <div class="lottery-names" id="lotteryDisplay">点击开始抽奖</div>
+        <button class="lottery-btn" id="lotteryBtn">开始<br>抽奖</button>
+        <div class="winners-list" id="winnersList"></div>
+        <div class="lottery-info" id="lotteryInfo">抽奖池：本月签到成员</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">🏆 本月中奖记录</div>
+      <div id="monthlyDraws"></div>
+    </div>
+  </div>
+
+  <!-- RECORDS PANEL -->
+  <div class="panel" id="records">
+    <div class="card">
+      <div class="card-title">📊 月度统计</div>
+      <div id="monthlyStats"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🏆 历史中奖</div>
+      <div id="allDraws"></div>
+    </div>
+  </div>
+
+  <!-- MEMBERS PANEL -->
+  <div class="panel" id="members">
+    <div class="card">
+      <div class="card-title">👥 社团成员（<span id="memberCount">0</span>人）</div>
+      <div id="membersList"></div>
+      <div style="margin-top:12px">
+        <div class="add-member-row">
+          <input type="text" id="newMemberInput" placeholder="输入新成员姓名">
+          <button class="btn btn-primary" style="width:auto;padding:10px 20px" id="addMemberBtn">添加</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ========== DATA LAYER ==========
+const STORAGE_KEY = 'swimming_club';
+
+const DEFAULT_MEMBERS = [
+  '杨同鹏', '张三', '李四', '王五', '赵六',
+  '钱七', '孙八', '周九', '吴十', '郑十一',
+  '冯十二', '陈十三', '褚十四', '卫十五', '蒋十六',
+  '沈十七', '韩十八', '杨十九', '朱二十'
+];
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return { members: [...DEFAULT_MEMBERS], checkins: [], draws: [] };
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let data = loadData();
+
+// ========== UI LAYER ==========
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// Tab switching
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'records') renderRecords();
+    if (tab.dataset.tab === 'lottery') renderLotteryInfo();
+  });
+});
+
+// ========== CHECK-IN ==========
+const selectedMembers = new Set();
+
+function renderCheckinGrid() {
+  const grid = document.getElementById('checkinGrid');
+  grid.innerHTML = data.members.map(name => {
+    const cls = selectedMembers.has(name) ? 'member-chip selected' : 'member-chip';
+    return `<div class="${cls}" data-name="${name}">${name}</div>`;
+  }).join('');
+
+  // Today's date
+  document.getElementById('checkinDate').value = new Date().toISOString().split('T')[0];
+
+  // Toggle selection
+  grid.querySelectorAll('.member-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const name = chip.dataset.name;
+      if (selectedMembers.has(name)) { selectedMembers.delete(name); chip.classList.remove('selected'); }
+      else { selectedMembers.add(name); chip.classList.add('selected'); }
+      updateCheckinCount();
+    });
+  });
+}
+
+function updateCheckinCount() {
+  document.getElementById('selectedCount').textContent = `已选 ${selectedMembers.size} 人`;
+  document.getElementById('submitCheckin').disabled = selectedMembers.size === 0;
+}
+
+document.getElementById('submitCheckin').addEventListener('click', () => {
+  const date = document.getElementById('checkinDate').value;
+  if (!date) { showToast('请选择日期'); return; }
+  if (selectedMembers.size === 0) { showToast('请至少选择一人'); return; }
+
+  data.checkins.push({ date, attendees: [...selectedMembers], note: '' });
+  saveData(data);
+  selectedMembers.clear();
+  renderCheckinGrid();
+  updateCheckinCount();
+  renderMonthlyCheckins();
+  showToast('签到成功！');
+});
+
+function renderMonthlyCheckins() {
+  const container = document.getElementById('monthlyCheckins');
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+
+  const monthly = data.checkins.filter(c => {
+    const d = new Date(c.date);
+    return d.getMonth() === month && d.getFullYear() === year;
+  }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (monthly.length === 0) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>本月暂无签到记录</div>';
+    return;
+  }
+
+  container.innerHTML = monthly.map(c => `
+    <div class="record-item">
+      <div class="record-date">${c.date}</div>
+      <div class="record-detail">${c.attendees.length} 人参加：${c.attendees.join('、')}</div>
+    </div>
+  `).join('');
+}
+
+// ========== LOTTERY ==========
+let rolling = false;
+let rollInterval = null;
+
+function getMonthlyPool() {
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+
+  const attendees = new Set();
+  data.checkins.forEach(c => {
+    const d = new Date(c.date);
+    if (d.getMonth() === month && d.getFullYear() === year) {
+      c.attendees.forEach(a => attendees.add(a));
+    }
+  });
+  return [...attendees];
+}
+
+function renderLotteryInfo() {
+  const pool = getMonthlyPool();
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+  const draws = data.draws.filter(d => {
+    const dd = new Date(d.date);
+    return dd.getMonth() === month && dd.getFullYear() === year;
+  });
+
+  document.getElementById('lotteryInfo').textContent =
+    `抽奖池：${pool.length} 人 | 本月已抽 ${draws.length} 次`;
+
+  // Show monthly draws
+  const container = document.getElementById('monthlyDraws');
+  if (draws.length === 0) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">🎲</div>本月暂无抽奖记录</div>';
+  } else {
+    container.innerHTML = draws.map(d => `
+      <div class="record-item draw">
+        <div class="record-date">${d.date}</div>
+        <div class="record-detail">🏆 ${d.winners.join(' · ')}</div>
+      </div>
+    `).join('');
+  }
+}
+
+document.getElementById('lotteryBtn').addEventListener('click', () => {
+  if (rolling) {
+    // Stop rolling
+    clearInterval(rollInterval);
+    rolling = false;
+
+    const pool = getMonthlyPool();
+    if (pool.length < 3) {
+      showToast('抽奖池不足3人，请先签到');
+      document.getElementById('lotteryDisplay').textContent = '抽奖池不足3人';
+      return;
+    }
+
+    // Fisher-Yates shuffle
+    const shuffled = [...pool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const winners = shuffled.slice(0, 3);
+
+    document.getElementById('lotteryDisplay').textContent = '🎉 恭喜！';
+    document.getElementById('winnersList').innerHTML = winners.map(w =>
+      `<span class="winner-badge">${w}</span>`
+    ).join('');
+
+    // Save draw
+    data.draws.push({
+      date: new Date().toISOString().split('T')[0],
+      pool: pool,
+      winners: winners,
+      count: 3
+    });
+    saveData(data);
+    renderLotteryInfo();
+
+    document.getElementById('lotteryBtn').textContent = '再抽\n一次';
+
+  } else {
+    // Start rolling
+    const pool = getMonthlyPool();
+    if (pool.length < 3) {
+      showToast('抽奖池不足3人，请先签到');
+      return;
+    }
+
+    rolling = true;
+    document.getElementById('winnersList').innerHTML = '';
+    document.getElementById('lotteryDisplay').textContent = '';
+    document.getElementById('lotteryBtn').textContent = '停！';
+
+    let idx = 0;
+    rollInterval = setInterval(() => {
+      document.getElementById('lotteryDisplay').textContent = pool[idx % pool.length];
+      idx++;
+    }, 80);
+  }
+});
+
+// ========== RECORDS ==========
+function renderRecords() {
+  // Monthly stats
+  const now = new Date();
+  const month = now.getMonth();
+  const year = now.getFullYear();
+
+  const monthlyCheckins = data.checkins.filter(c => {
+    const d = new Date(c.date);
+    return d.getMonth() === month && d.getFullYear() === year;
+  });
+
+  const attendCounts = {};
+  monthlyCheckins.forEach(c => {
+    c.attendees.forEach(a => { attendCounts[a] = (attendCounts[a] || 0) + 1; });
+  });
+
+  const statsHtml = monthlyCheckins.length === 0
+    ? '<div class="empty">本月暂无签到</div>'
+    : `<div style="margin-bottom:12px">
+         <strong>本月签到次数：</strong>${monthlyCheckins.length} 次<br>
+         <strong>参与率：</strong>${(monthlyCheckins.length > 0 ? Math.round(Object.keys(attendCounts).length / data.members.length * 100) : 0)}%
+       </div>
+       <div style="font-size:13px;color:#64748b;margin-bottom:8px">活跃排名：</div>
+       ${Object.entries(attendCounts).sort((a,b) => b[1]-a[1]).map(([name, count]) =>
+         `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9">
+            <span>${name}</span><span style="color:#0077b6;font-weight:600">${count} 次</span>
+          </div>`
+       ).join('')}`;
+
+  document.getElementById('monthlyStats').innerHTML = statsHtml;
+
+  // All draws
+  const allDraws = data.draws.sort((a,b) => new Date(b.date) - new Date(a.date));
+  document.getElementById('allDraws').innerHTML = allDraws.length === 0
+    ? '<div class="empty">暂无抽奖记录</div>'
+    : allDraws.map(d => `
+        <div class="record-item draw">
+          <div class="record-date">${d.date}</div>
+          <div class="record-detail">🏆 ${d.winners.join(' · ')}</div>
+        </div>
+      `).join('');
+}
+
+// ========== MEMBERS ==========
+function renderMembers() {
+  document.getElementById('memberCount').textContent = data.members.length;
+  document.getElementById('membersList').innerHTML = data.members.map((name, i) => `
+    <div class="member-row">
+      <span class="name">${i+1}. ${name}</span>
+      <span class="delete-btn" data-idx="${i}">✕</span>
+    </div>
+  `).join('');
+
+  document.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (confirm(`确定删除 ${data.members[btn.dataset.idx]} 吗？`)) {
+        data.members.splice(btn.dataset.idx, 1);
+        saveData(data);
+        renderMembers();
+        renderCheckinGrid();
+        showToast('已删除');
+      }
+    });
+  });
+}
+
+document.getElementById('addMemberBtn').addEventListener('click', () => {
+  const input = document.getElementById('newMemberInput');
+  const name = input.value.trim();
+  if (!name) { showToast('请输入姓名'); return; }
+  if (data.members.includes(name)) { showToast('成员已存在'); return; }
+  data.members.push(name);
+  saveData(data);
+  input.value = '';
+  renderMembers();
+  renderCheckinGrid();
+  showToast('添加成功');
+});
+
+// ========== INIT ==========
+renderCheckinGrid();
+renderMonthlyCheckins();
+renderLotteryInfo();
+renderMembers();
+</script>
+
+</body>
+</html>
