@@ -236,49 +236,26 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ========== GITHUB STORAGE ==========
-const GH = {
-  owner: 'Ytp66655',
-  repo: 'swimming-club',
-  branch: 'main',
-  path: 'data.json',
-  rawUrl: 'https://raw.githubusercontent.com/Ytp66655/swimming-club/main/data.json',
-  token: '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'
-};
+// ========== JSONBLOB STORAGE (free, no signup) ==========
+const BLOB_ID = '019d7059-3a8b-78df-9c05-02e07a515c4f';
+const BLOB_READ = 'https://jsonblob.com/api/jsonBlob/' + BLOB_ID;
+const BLOB_WRITE = BLOB_READ;
 
-const apiBase = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${GH.path}`;
-
-async function ghFetch(url, options = {}) {
-  const resp = await fetch(url, {
-    ...options,
-    headers: {
-      'Authorization': `token ${GH.token}`,
-      'Accept': 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    }
-  });
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-  return resp.json();
-}
-
-let cachedData = null; // In-memory cache for fast reads
+let cachedData = null;
 
 async function loadData() {
   const syncBar = document.getElementById('syncBar');
   syncBar.textContent = '⏳ 加载数据中…';
   syncBar.className = 'sync-bar loading';
   try {
-    // Read from raw GitHub (public, fast)
-    const resp = await fetch(GH.rawUrl + '?t=' + Date.now(), { cache: 'no-store' });
+    const resp = await fetch(BLOB_READ + '?t=' + Date.now(), { cache: 'no-store' });
     if (resp.ok) {
       cachedData = await resp.json();
       syncBar.className = 'sync-bar';
       syncBar.style.display = 'none';
       return cachedData;
     }
-  } catch(e) { console.warn('loadData failed, using cache:', e); }
-  // Fallback to memory cache or empty
+  } catch(e) { console.warn('loadData failed:', e); }
   if (cachedData) return cachedData;
   cachedData = { members: MEMBERS, checkins: [], draws: [] };
   syncBar.className = 'sync-bar error';
@@ -288,34 +265,25 @@ async function loadData() {
 }
 
 async function saveData(data) {
-  cachedData = data; // Update cache immediately
+  cachedData = data;
   const syncBar = document.getElementById('syncBar');
   syncBar.textContent = '💾 保存中…';
   syncBar.className = 'sync-bar loading';
   syncBar.style.display = 'block';
   try {
-    // Get current SHA
-    let sha = null;
-    try {
-      const info = await ghFetch(apiBase);
-      sha = info.sha;
-    } catch(e) { /* file may not exist */ }
-
-    // Commit
-    const contentStr = JSON.stringify(data, null, 2);
-    const contentB64 = btoa(unescape(encodeURIComponent(contentStr)));
-    const body = { message: `Update: ${new Date().toISOString()}`, content: contentB64, branch: GH.branch };
-    if (sha) body.sha = sha;
-
-    await ghFetch(apiBase, { method: 'PUT', body: JSON.stringify(body) });
-
+    const resp = await fetch(BLOB_WRITE, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (!resp.ok) throw new Error('PUT failed');
     syncBar.className = 'sync-bar';
     syncBar.style.display = 'none';
     return true;
   } catch(e) {
     console.error('saveData failed:', e);
     syncBar.className = 'sync-bar error';
-    syncBar.textContent = '⚠️ 保存失败（网络问题）';
+    syncBar.textContent = '⚠️ 保存失败，请重试';
     setTimeout(() => { syncBar.className = 'sync-bar'; syncBar.style.display = 'none'; }, 3000);
     return false;
   }
