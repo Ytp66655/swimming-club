@@ -24,7 +24,7 @@
     .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
     .card-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 
-    /* Check-in: single tap */
+    /* Check-in */
     .date-label { font-size: 14px; color: #64748b; margin-bottom: 12px; text-align: center; }
     .checkin-status { text-align: center; font-size: 13px; color: #64748b; margin-bottom: 16px; }
     .members-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -35,7 +35,7 @@
     .member-tap.pending { background: #f1f5f9; color: #1a1a2e; }
     .member-tap.pending:active { background: #e0f2fe; }
 
-    /* Confirm dialog */
+    /* Dialog */
     .dialog-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; align-items: center; justify-content: center; padding: 24px; }
     .dialog-overlay.show { display: flex; }
     .dialog { background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 320px; text-align: center; }
@@ -47,31 +47,95 @@
     .dialog-btn.cancel { background: #f1f5f9; color: #64748b; }
     .dialog-btn:active { opacity: 0.8; }
 
-    /* Lottery */
-    .lottery-stage { text-align: center; padding: 40px 16px; }
-    .lottery-names { font-size: 28px; font-weight: 700; color: #0077b6; margin: 20px 0; min-height: 44px; }
-    .lottery-btn { width: 200px; height: 200px; border-radius: 50%; border: 4px solid #0077b6; background: linear-gradient(135deg, #f0f9ff, #e0f2fe); font-size: 20px; font-weight: 700; color: #0077b6; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 20px rgba(0,119,182,0.2); -webkit-user-select: none; user-select: none; }
+    /* ========== LOTTERY: 水上锦鲤 ========== */
+    #lottery {
+      background: linear-gradient(180deg, #e0f7ff 0%, #bae6fd 40%, #7dd3fc 100%);
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+    #lottery .card { background: rgba(255,255,255,0.9); backdrop-filter: blur(10px); }
+
+    .lottery-header { text-align: center; margin-bottom: 24px; }
+    .lottery-title { font-size: 28px; font-weight: 800; color: #0c4a6e; margin-bottom: 4px; }
+    .lottery-subtitle { font-size: 14px; color: #0369a1; }
+
+    /* Water tank */
+    .water-tank { position: relative; width: 100%; max-width: 400px; margin: 0 auto 24px; height: 200px; overflow: hidden; border-radius: 20px; background: linear-gradient(180deg, #e0f7ff 0%, #38bdf8 100%); box-shadow: inset 0 0 30px rgba(255,255,255,0.5), 0 8px 32px rgba(14,165,233,0.3); }
+
+    /* Water ripples */
+    .ripple { position: absolute; width: 100%; height: 60px; bottom: 0; left: 0; overflow: hidden; }
+    .ripple::before { content: ''; position: absolute; width: 200%; height: 100%; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120'%3E%3Cpath fill='rgba(255,255,255,0.4)' d='M0,60 C150,120 350,0 600,60 C850,120 1050,0 1200,60 L1200,120 L0,120 Z'/%3E%3C/svg%3E") repeat-x; background-size: 600px 60px; animation: ripple 3s linear infinite; }
+    .ripple::after { content: ''; position: absolute; width: 200%; height: 100%; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120'%3E%3Cpath fill='rgba(255,255,255,0.3)' d='M0,80 C150,20 350,100 600,60 C850,20 1050,100 1200,80 L1200,120 L0,120 Z'/%3E%3C/svg%3E") repeat-x; background-size: 600px 60px; animation: ripple 2.5s linear infinite reverse; }
+    @keyframes ripple { 0% { transform: translateX(0); } 100% { transform: translateX(-600px); } }
+
+    /* Koi fish */
+    .koi-container { position: absolute; top: 50%; left: -60px; transform: translateY(-50%); animation: swimAcross 8s ease-in-out infinite; }
+    @keyframes swimAcross { 0% { left: -60px; } 50% { left: calc(100% + 60px); } 51% { transform: translateY(-50%) scaleX(-1); } 100% { left: -60px; transform: translateY(-50%) scaleX(-1); } }
+
+    .koi { width: 50px; height: 30px; position: relative; }
+    .koi-body { width: 40px; height: 24px; background: linear-gradient(135deg, #f97316, #fb923c); border-radius: 50% 40% 40% 50%; position: absolute; top: 3px; left: 5px; box-shadow: 0 2px 8px rgba(249,115,22,0.4); }
+    .koi-body::before { content: ''; position: absolute; width: 20px; height: 16px; background: #fff; border-radius: 50%; top: 4px; left: 12px; opacity: 0.6; }
+    .koi-tail { width: 0; height: 0; border-top: 10px solid transparent; border-bottom: 10px solid transparent; border-right: 18px solid #f97316; position: absolute; top: 5px; left: -10px; animation: wagTail 0.3s ease-in-out infinite alternate; }
+    @keyframes wagTail { 0% { transform: rotate(-15deg); } 100% { transform: rotate(15deg); } }
+    .koi-eye { width: 5px; height: 5px; background: #1a1a2e; border-radius: 50%; position: absolute; top: 8px; right: 8px; }
+
+    /* Bubbles */
+    .bubble { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.6); animation: rise 3s ease-in infinite; }
+    @keyframes rise { 0% { transform: translateY(0) scale(1); opacity: 0.8; } 100% { transform: translateY(-180px) scale(0.5); opacity: 0; } }
+
+    /* Name roller */
+    .name-roller-wrap { position: relative; z-index: 10; padding: 20px 0; }
+    .name-roller { font-size: 28px; font-weight: 800; color: #0c4a6e; text-align: center; min-height: 44px; text-shadow: 0 2px 8px rgba(14,165,233,0.3); }
+    .name-roller.rolling { animation: colorPulse 0.15s infinite; }
+    @keyframes colorPulse { 0% { color: #0369a1; } 50% { color: #0284c7; } 100% { color: #0ea5e9; } }
+
+    /* Big button */
+    .lottery-btn-wrap { text-align: center; position: relative; z-index: 10; }
+    .lottery-btn { width: 160px; height: 160px; border-radius: 50%; border: none; background: linear-gradient(145deg, #f97316, #ea580c); color: #fff; font-size: 20px; font-weight: 800; cursor: pointer; transition: all 0.2s; box-shadow: 0 8px 30px rgba(249,115,22,0.4), inset 0 2px 0 rgba(255,255,255,0.2); position: relative; overflow: hidden; -webkit-user-select: none; user-select: none; }
+    .lottery-btn::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%); animation: shine 3s infinite; }
+    @keyframes shine { 0% { transform: translateX(-100%) rotate(45deg); } 100% { transform: translateX(100%) rotate(45deg); } }
     .lottery-btn:active { transform: scale(0.95); }
-    .winners-list { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px; }
-    .winner-badge { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; padding: 10px 24px; border-radius: 24px; font-size: 18px; font-weight: 700; box-shadow: 0 2px 8px rgba(245,158,11,0.3); }
-    .lottery-info { font-size: 13px; color: #64748b; margin-top: 16px; }
+    .lottery-btn:disabled { background: linear-gradient(145deg, #94a3b8, #64748b); cursor: not-allowed; box-shadow: none; }
+
+    /* Winners */
+    .winners-section { margin-top: 20px; }
+    .winners-title { font-size: 16px; font-weight: 700; color: #0c4a6e; text-align: center; margin-bottom: 12px; }
+    .winners-list { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .winner-badge { background: linear-gradient(135deg, #f97316, #ea580c); color: #fff; padding: 10px 20px; border-radius: 24px; font-size: 16px; font-weight: 700; box-shadow: 0 4px 12px rgba(249,115,22,0.4); animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; }
+    .winner-badge::before { content: '🐟'; position: absolute; left: -8px; top: -8px; font-size: 16px; }
+    @keyframes popIn { 0% { transform: scale(0) rotate(-10deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+
+    .lottery-info { text-align: center; font-size: 13px; color: #0369a1; margin-top: 16px; }
+
+    /* Confetti */
+    .confetti-wrap { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 500; overflow: hidden; }
+    .confetti-piece { position: absolute; width: 10px; height: 10px; animation: confettiFall 3s ease-out forwards; }
+    @keyframes confettiFall { 0% { transform: translateY(-20px) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
 
     /* Records */
+    .summary-header { font-size: 14px; font-weight: 700; color: #0077b6; margin-bottom: 8px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 16px; }
+    .summary-chip { padding: 8px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; text-align: center; }
+    .summary-chip.yes { background: #dcfce7; color: #16a34a; }
+    .summary-chip.no { background: #fef2f2; color: #dc2626; }
+    .summary-chip.first { background: #fef3c7; color: #d97706; }
+
     .record-item { padding: 12px; background: #fff; border-radius: 10px; margin-bottom: 8px; border-left: 4px solid #0077b6; }
-    .record-item.draw { border-left-color: #f59e0b; }
+    .record-item.draw { border-left-color: #f97316; }
     .record-date { font-size: 12px; color: #94a3b8; }
     .record-detail { font-size: 14px; margin-top: 4px; line-height: 1.6; }
 
     .empty { text-align: center; padding: 40px 16px; color: #94a3b8; }
     .empty-icon { font-size: 48px; margin-bottom: 12px; }
 
-    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; padding: 10px 24px; border-radius: 20px; font-size: 14px; z-index: 400; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; padding: 10px 24px; border-radius: 20px; font-size: 14px; z-index: 600; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
     .toast.show { opacity: 1; }
 
     @media (min-width: 768px) {
       .members-grid { grid-template-columns: repeat(4, 1fr); }
-      .lottery-btn { width: 260px; height: 260px; font-size: 24px; }
-      .lottery-names { font-size: 36px; }
+      .summary-grid { grid-template-columns: repeat(5, 1fr); }
+      .lottery-btn { width: 200px; height: 200px; font-size: 24px; }
+      .name-roller { font-size: 36px; }
     }
   </style>
 </head>
@@ -84,7 +148,7 @@
 
 <div class="tabs">
   <div class="tab active" data-tab="checkin">📝 签到</div>
-  <div class="tab" data-tab="lottery">🎰 抽奖</div>
+  <div class="tab" data-tab="lottery">🎰 水上锦鲤</div>
   <div class="tab" data-tab="records">📊 记录</div>
 </div>
 
@@ -103,16 +167,43 @@
   <!-- LOTTERY PANEL -->
   <div class="panel" id="lottery">
     <div class="card">
-      <div class="card-title">🎰 月度抽奖</div>
-      <div class="lottery-stage">
-        <div class="lottery-names" id="lotteryDisplay">点击开始抽奖</div>
-        <button class="lottery-btn" id="lotteryBtn">开始<br>抽奖</button>
-        <div class="winners-list" id="winnersList"></div>
-        <div class="lottery-info" id="lotteryInfo"></div>
+      <div class="lottery-header">
+        <div class="lottery-title">🎏 水上锦鲤</div>
+        <div class="lottery-subtitle">本月签到成员随机抽取</div>
       </div>
+
+      <!-- Water tank -->
+      <div class="water-tank">
+        <div class="ripple"></div>
+        <div class="koi-container">
+          <div class="koi">
+            <div class="koi-tail"></div>
+            <div class="koi-body">
+              <div class="koi-eye"></div>
+            </div>
+          </div>
+        </div>
+        <div id="bubbleContainer"></div>
+
+        <div class="name-roller-wrap">
+          <div class="name-roller" id="nameRoller">点击按钮开始抽奖</div>
+        </div>
+      </div>
+
+      <div class="lottery-btn-wrap">
+        <button class="lottery-btn" id="lotteryBtn">开<br>始</button>
+      </div>
+
+      <div class="winners-section" id="winnersSection" style="display:none">
+        <div class="winners-title">🎉 恭喜以下锦鲤 🎉</div>
+        <div class="winners-list" id="winnersList"></div>
+      </div>
+
+      <div class="lottery-info" id="lotteryInfo"></div>
     </div>
+
     <div class="card">
-      <div class="card-title">🏆 本月中奖记录</div>
+      <div class="card-title">🏆 本月锦鲤记录</div>
       <div id="monthlyDraws"></div>
     </div>
   </div>
@@ -120,8 +211,12 @@
   <!-- RECORDS PANEL -->
   <div class="panel" id="records">
     <div class="card">
-      <div class="card-title">📊 月度统计</div>
-      <div id="monthlyStats"></div>
+      <div class="card-title">📊 本月出勤概览</div>
+      <div id="monthlySummary"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📅 签到明细</div>
+      <div id="monthlyCheckins"></div>
     </div>
     <div class="card">
       <div class="card-title">🏆 历史中奖</div>
@@ -144,6 +239,9 @@
   </div>
 </div>
 
+<!-- Confetti container -->
+<div class="confetti-wrap" id="confettiWrap"></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -163,12 +261,9 @@ function saveData(d) { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
 let data = loadData();
 
 function todayStr() { return new Date().toISOString().split('T')[0]; }
+function getTodayCheckin() { return data.checkins.find(c => c.date === todayStr()); }
 
-function getTodayCheckin() {
-  return data.checkins.find(c => c.date === todayStr());
-}
-
-function showToast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2000); }
+function showToast(m) { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2500); }
 
 // Tabs
 document.querySelectorAll('.tab').forEach(tab => {
@@ -179,7 +274,7 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.getElementById(tab.dataset.tab).classList.add('active');
     if (tab.dataset.tab === 'checkin') renderCheckin();
     if (tab.dataset.tab === 'records') renderRecords();
-    if (tab.dataset.tab === 'lottery') renderLotteryInfo();
+    if (tab.dataset.tab === 'lottery') { renderLotteryInfo(); startBubbles(); }
   });
 });
 
@@ -187,32 +282,23 @@ document.querySelectorAll('.tab').forEach(tab => {
 let pendingName = null;
 
 function renderCheckin() {
-  const today = todayStr();
-  document.getElementById('todayDate').textContent = today;
-
+  document.getElementById('todayDate').textContent = todayStr();
   const tc = getTodayCheckin();
-  const checkedIn = tc ? tc.attendees : [];
-
-  document.getElementById('checkinStatus').textContent =
-    `已签到 ${checkedIn.length} / ${MEMBERS.length} 人`;
-
+  const checked = tc ? tc.attendees : [];
+  document.getElementById('checkinStatus').textContent = `已签到 ${checked.length} / ${MEMBERS.length} 人`;
   const grid = document.getElementById('membersGrid');
   grid.innerHTML = MEMBERS.map(name => {
-    const isChecked = checkedIn.includes(name);
+    const isChecked = checked.includes(name);
     const cls = isChecked ? 'member-tap checked-in' : 'member-tap pending';
     return `<div class="${cls}" data-name="${name}">${name}</div>`;
   }).join('');
-
   grid.querySelectorAll('.member-tap').forEach(el => {
     el.addEventListener('click', () => {
       const name = el.dataset.name;
-      if (el.classList.contains('checked-in')) {
-        showToast(`${name} 已签到`);
-        return;
-      }
+      if (el.classList.contains('checked-in')) { showToast(`${name} 已签到`); return; }
       pendingName = name;
       document.getElementById('dialogName').textContent = name;
-      document.getElementById('dialogDate').textContent = today;
+      document.getElementById('dialogDate').textContent = todayStr();
       document.getElementById('dialogOverlay').classList.add('show');
     });
   });
@@ -222,19 +308,11 @@ document.getElementById('dialogCancel').addEventListener('click', () => {
   document.getElementById('dialogOverlay').classList.remove('show');
   pendingName = null;
 });
-
 document.getElementById('dialogConfirm').addEventListener('click', () => {
   if (!pendingName) return;
-  const today = todayStr();
-  let tc = data.checkins.find(c => c.date === today);
-  if (!tc) {
-    tc = { date: today, attendees: [], note: '' };
-    data.checkins.push(tc);
-  }
-  if (!tc.attendees.includes(pendingName)) {
-    tc.attendees.push(pendingName);
-    saveData(data);
-  }
+  let tc = data.checkins.find(c => c.date === todayStr());
+  if (!tc) { tc = { date: todayStr(), attendees: [], note: '' }; data.checkins.push(tc); }
+  if (!tc.attendees.includes(pendingName)) { tc.attendees.push(pendingName); saveData(data); }
   document.getElementById('dialogOverlay').classList.remove('show');
   showToast(`${pendingName} 签到成功！`);
   pendingName = null;
@@ -251,60 +329,137 @@ function getMonthlyPool() {
   return [...att];
 }
 
+function startBubbles() {
+  const container = document.getElementById('bubbleContainer');
+  if (container._bubbleTimer) clearInterval(container._bubbleTimer);
+  container._bubbleTimer = setInterval(() => {
+    if (document.getElementById('lottery').classList.contains('active')) {
+      const b = document.createElement('div');
+      b.className = 'bubble';
+      b.style.width = b.style.height = (4 + Math.random() * 8) + 'px';
+      b.style.left = (Math.random() * 80 + 10) + '%';
+      b.style.bottom = '10px';
+      b.style.animationDuration = (2 + Math.random() * 2) + 's';
+      container.appendChild(b);
+      setTimeout(() => b.remove(), 4000);
+    }
+  }, 500);
+}
+
+function spawnConfetti() {
+  const wrap = document.getElementById('confettiWrap');
+  const colors = ['#f97316','#fbbf24','#22c55e','#3b82f6','#a855f7','#ec4899','#14b8a6'];
+  for (let i = 0; i < 60; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.animationDelay = Math.random() * 1 + 's';
+    p.style.animationDuration = (2 + Math.random() * 2) + 's';
+    p.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+    p.style.transform = `rotate(${Math.random() * 360}deg)`;
+    wrap.appendChild(p);
+    setTimeout(() => p.remove(), 5000);
+  }
+}
+
 function renderLotteryInfo() {
   const pool = getMonthlyPool();
   const now = new Date(), m = now.getMonth(), y = now.getFullYear();
   const draws = data.draws.filter(d => { const dd = new Date(d.date); return dd.getMonth() === m && dd.getFullYear() === y; });
-  document.getElementById('lotteryInfo').textContent = `抽奖池：${pool.length} 人 | 本月已抽 ${draws.length} 次`;
+  document.getElementById('lotteryInfo').textContent = `本月签到 ${pool.length} 人 | 已抽取 ${draws.length} 次`;
   const c = document.getElementById('monthlyDraws');
-  if (!draws.length) { c.innerHTML = '<div class="empty"><div class="empty-icon">🎲</div>本月暂无抽奖记录</div>'; }
-  else { c.innerHTML = draws.map(d => `<div class="record-item draw"><div class="record-date">${d.date}</div><div class="record-detail">🏆 ${d.winners.join(' · ')}</div></div>`).join(''); }
+  if (!draws.length) { c.innerHTML = '<div class="empty"><div class="empty-icon">🎲</div>本月暂无锦鲤记录</div>'; }
+  else { c.innerHTML = draws.map(d => `<div class="record-item draw"><div class="record-date">${d.date}</div><div class="record-detail">🐟 ${d.winners.join(' · ')}</div></div>`).join(''); }
 }
 
 document.getElementById('lotteryBtn').addEventListener('click', () => {
   if (rolling) {
     clearInterval(rollInterval); rolling = false;
     const pool = getMonthlyPool();
-    if (pool.length < 3) { showToast('抽奖池不足3人'); return; }
+    if (pool.length < 3) { showToast('签到池不足3人，请先签到'); return; }
     const shuffled = [...pool];
     for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; }
     const winners = shuffled.slice(0, 3);
-    document.getElementById('lotteryDisplay').textContent = '🎉 恭喜！';
+    document.getElementById('nameRoller').textContent = '🎉 恭喜！';
+    document.getElementById('nameRoller').classList.remove('rolling');
+    document.getElementById('winnersSection').style.display = 'block';
     document.getElementById('winnersList').innerHTML = winners.map(w => `<span class="winner-badge">${w}</span>`).join('');
     data.draws.push({ date: todayStr(), pool, winners, count: 3 });
     saveData(data); renderLotteryInfo();
+    spawnConfetti();
     document.getElementById('lotteryBtn').textContent = '再抽\n一次';
   } else {
     const pool = getMonthlyPool();
-    if (pool.length < 3) { showToast('抽奖池不足3人，请先签到'); return; }
+    if (pool.length < 3) { showToast('签到池不足3人，请先签到'); return; }
     rolling = true;
-    document.getElementById('winnersList').innerHTML = '';
-    document.getElementById('lotteryDisplay').textContent = '';
+    document.getElementById('winnersSection').style.display = 'none';
+    document.getElementById('nameRoller').textContent = '';
+    document.getElementById('nameRoller').classList.add('rolling');
     document.getElementById('lotteryBtn').textContent = '停！';
     let idx = 0;
-    rollInterval = setInterval(() => { document.getElementById('lotteryDisplay').textContent = pool[idx % pool.length]; idx++; }, 80);
+    rollInterval = setInterval(() => { document.getElementById('nameRoller').textContent = pool[idx % pool.length]; idx++; }, 80);
   }
 });
 
 // ========== RECORDS ==========
 function renderRecords() {
   const now = new Date(), m = now.getMonth(), y = now.getFullYear();
-  const mc = data.checkins.filter(c => { const d = new Date(c.date); return d.getMonth() === m && d.getFullYear() === y; });
+  const mc = data.checkins.filter(c => { const d = new Date(c.date); return d.getMonth() === m && d.getFullYear() === y; }).sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  // Attendee counts
   const counts = {};
   mc.forEach(c => c.attendees.forEach(a => { counts[a] = (counts[a] || 0) + 1; }));
-  const sh = mc.length === 0 ? '<div class="empty">本月暂无签到</div>'
-    : `<div style="margin-bottom:12px"><strong>本月签到次数：</strong>${mc.length} 次<br><strong>参与人数：</strong>${Object.keys(counts).length} 人</div>
-       <div style="font-size:13px;color:#64748b;margin-bottom:8px">活跃排名：</div>
-       ${Object.entries(counts).sort((a,b) => b[1]-a[1]).map(([n, c]) => `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9"><span>${n}</span><span style="color:#0077b6;font-weight:600">${c} 次</span></div>`).join('')}`;
-  document.getElementById('monthlyStats').innerHTML = sh;
+
+  // Sort members: attended first (by count), absent last
+  const sorted = [...MEMBERS].sort((a, b) => (counts[b] || 0) - (counts[a] || 0));
+
+  const attCount = Object.keys(counts).length;
+  const noAttCount = MEMBERS.length - attCount;
+  const mostActive = Object.entries(counts).sort((a,b) => b[1]-a[1])[0];
+
+  let summaryHtml = `<div style="margin-bottom:12px;padding:12px;background:#f0f9ff;border-radius:10px;font-size:13px">
+    <div style="margin-bottom:6px"><strong>本月活动 ${mc.length} 次，${attCount} 人参与</strong></div>`;
+  if (mostActive) {
+    summaryHtml += `<div style="color:#0369a1">🏆 最活跃：${mostActive[0]}（${mostActive[1]}次）</div>`;
+  }
+  summaryHtml += `</div>`;
+
+  // Member chips: green = attended, red = absent
+  summaryHtml += `<div class="summary-header">本月出勤（${attCount}人）</div><div class="summary-grid">`;
+  sorted.forEach(name => {
+    const count = counts[name] || 0;
+    if (count > 0) {
+      const cls = count >= Math.max(...Object.values(counts), 1) ? 'first' : 'yes';
+      summaryHtml += `<div class="summary-chip ${cls}">${name} (${count}次)</div>`;
+    }
+  });
+  summaryHtml += `</div>`;
+
+  const absent = MEMBERS.filter(n => !counts[n]);
+  if (absent.length > 0) {
+    summaryHtml += `<div class="summary-header" style="color:#dc2626">本月未出席（${absent.length}人）</div><div class="summary-grid">`;
+    absent.forEach(name => { summaryHtml += `<div class="summary-chip no">${name}</div>`; });
+    summaryHtml += `</div>`;
+  }
+
+  document.getElementById('monthlySummary').innerHTML = summaryHtml;
+
+  // Check-in records
+  const ci = document.getElementById('monthlyCheckins');
+  if (!mc.length) { ci.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>本月暂无签到记录</div>'; }
+  else { ci.innerHTML = mc.map(x => `<div class="record-item"><div class="record-date">${x.date}</div><div class="record-detail">${x.attendees.length} 人：${x.attendees.join('、')}</div></div>`).join(''); }
+
+  // All draws
   const ad = data.draws.sort((a,b) => new Date(b.date) - new Date(a.date));
-  document.getElementById('allDraws').innerHTML = !ad.length ? '<div class="empty">暂无抽奖记录</div>'
-    : ad.map(d => `<div class="record-item draw"><div class="record-date">${d.date}</div><div class="record-detail">🏆 ${d.winners.join(' · ')}</div></div>`).join('');
+  document.getElementById('allDraws').innerHTML = !ad.length ? '<div class="empty">暂无锦鲤记录</div>'
+    : ad.map(d => `<div class="record-item draw"><div class="record-date">${d.date}</div><div class="record-detail">🐟 ${d.winners.join(' · ')}</div></div>`).join('');
 }
 
 // ========== INIT ==========
 renderCheckin();
 renderLotteryInfo();
+startBubbles();
 </script>
 
 </body>
