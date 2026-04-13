@@ -31,14 +31,27 @@
 
     /* Check-in */
     .date-label { font-size: 14px; color: #64748b; margin-bottom: 12px; text-align: center; }
-    .checkin-status { text-align: center; font-size: 13px; color: #64748b; margin-bottom: 16px; }
+    .checkin-status { text-align: center; font-size: 13px; color: #64748b; margin-bottom: 8px; }
+    .checkin-stats { display: flex; gap: 8px; margin-bottom: 16px; }
+    .checkin-stat { flex: 1; padding: 10px 8px; border-radius: 10px; text-align: center; font-size: 12px; font-weight: 600; }
+    .checkin-stat .num { font-size: 22px; font-weight: 800; display: block; margin-bottom: 2px; }
+    .checkin-stat.today { background: #dcfce7; color: #16a34a; }
+    .checkin-stat.monthly { background: #dbeafe; color: #2563eb; }
+    .checkin-stat.absent { background: #fef2f2; color: #dc2626; }
     .members-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .member-tap { padding: 14px 8px; border-radius: 10px; background: #f1f5f9; text-align: center; font-size: 15px; cursor: pointer; transition: all 0.15s; border: 2px solid transparent; -webkit-user-select: none; user-select: none; position: relative; }
     .member-tap:active { transform: scale(0.96); }
     .member-tap.checked-in { background: #dcfce7; border-color: #22c55e; color: #16a34a; }
     .member-tap.checked-in::after { content: '✅'; position: absolute; top: 4px; right: 8px; font-size: 12px; }
+    .member-tap.month-active { background: #dbeafe; border-color: #60a5fa; color: #2563eb; }
+    .member-tap.month-active::after { content: '🌊'; position: absolute; top: 4px; right: 8px; font-size: 12px; }
     .member-tap.pending { background: #f1f5f9; color: #1a1a2e; }
     .member-tap.pending:active { background: #e0f2fe; }
+    .checkin-legend { display: flex; gap: 16px; justify-content: center; margin-bottom: 12px; font-size: 12px; color: #64748b; }
+    .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+    .legend-dot.green { background: #22c55e; }
+    .legend-dot.blue { background: #60a5fa; }
+    .legend-dot.gray { background: #cbd5e1; }
 
     /* Dialog */
     .dialog-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 300; align-items: center; justify-content: center; padding: 24px; }
@@ -153,7 +166,12 @@
     <div class="card">
       <div class="card-title">📝 今日签到</div>
       <div class="date-label" id="todayDate"></div>
-      <div class="checkin-status" id="checkinStatus"></div>
+      <div class="checkin-stats" id="checkinStats"></div>
+      <div class="checkin-legend">
+        <span><span class="legend-dot green"></span>今日已签</span>
+        <span><span class="legend-dot blue"></span>本月活跃</span>
+        <span><span class="legend-dot gray"></span>本月未签</span>
+      </div>
       <div class="members-grid" id="membersGrid"></div>
     </div>
   </div>
@@ -373,17 +391,36 @@ function renderCheckin() {
   document.getElementById('todayDate').textContent = todayStr();
   const tc = getTodayCheckin();
   const checked = tc ? tc.attendees : [];
-  document.getElementById('checkinStatus').textContent = `已签到 ${checked.length} / ${MEMBERS.length} 人`;
+
+  // 计算本月签到过的人
+  const now = new Date(), m = now.getMonth(), y = now.getFullYear();
+  const monthlySet = new Set();
+  appData.checkins.forEach(c => {
+    const d = new Date(c.date);
+    if (d.getMonth() === m && d.getFullYear() === y) c.attendees.forEach(a => monthlySet.add(a));
+  });
+  const monthlyCount = MEMBERS.filter(n => monthlySet.has(n)).length;
+  const absentCount = MEMBERS.length - monthlyCount;
+
+  // 统计卡片
+  document.getElementById('checkinStats').innerHTML =
+    `<div class="checkin-stat today"><span class="num">${checked.length}</span>今日签到</div>` +
+    `<div class="checkin-stat monthly"><span class="num">${monthlyCount}</span>本月活跃</div>` +
+    `<div class="checkin-stat absent"><span class="num">${absentCount}</span>本月未签</div>`;
+
   const grid = document.getElementById('membersGrid');
   grid.innerHTML = MEMBERS.map(name => {
-    const isChecked = checked.includes(name);
-    const cls = isChecked ? 'member-tap checked-in' : 'member-tap pending';
+    const isToday = checked.includes(name);
+    const isMonthly = monthlySet.has(name);
+    let cls = 'member-tap pending';
+    if (isToday) cls = 'member-tap checked-in';
+    else if (isMonthly) cls = 'member-tap month-active';
     return `<div class="${cls}" data-name="${name}">${name}</div>`;
   }).join('');
   grid.querySelectorAll('.member-tap').forEach(el => {
     el.addEventListener('click', () => {
       const name = el.dataset.name;
-      if (el.classList.contains('checked-in')) { showToast(`${name} 已签到`); return; }
+      if (el.classList.contains('checked-in')) { showToast(`${name} 今日已签到`); return; }
       pendingName = name;
       document.getElementById('dialogName').textContent = name;
       document.getElementById('dialogDate').textContent = todayStr();
