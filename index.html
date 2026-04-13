@@ -235,59 +235,93 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// Cloudflare Worker API (CORS enabled, no token on client)
-const API_URL = 'https://swimming-club-api.ytp66655.workers.dev/api/data';
+// ========== Supabase 后端 ==========
+const SUPABASE_URL = 'https://fqsibxdlpithwrjqpdnp.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_ndAQnv8n_7rwy8xn40PW7A_umLjS4A9';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let cachedData = null;
-
-async function loadData() {
+async function loadData(silent) {
   const syncBar = document.getElementById('syncBar');
-  syncBar.textContent = '⏳ 加载数据…';
-  syncBar.className = 'sync-bar loading';
-  syncBar.style.display = 'block';
+  if (!silent) {
+    syncBar.textContent = '⏳ 加载数据…';
+    syncBar.className = 'sync-bar loading';
+    syncBar.style.display = 'block';
+  }
   try {
-    const resp = await fetch(API_URL + '?t=' + Date.now());
-    if (resp.ok) {
-      cachedData = await resp.json();
-      syncBar.className = 'sync-bar';
-      syncBar.style.display = 'none';
-      return cachedData;
+    const [checkinsRes, drawsRes] = await Promise.all([
+      db.from('checkins').select('*'),
+      db.from('draws').select('*')
+    ]);
+    if (checkinsRes.error) throw checkinsRes.error;
+    if (drawsRes.error) throw drawsRes.error;
+
+    // 将扁平的签到行按日期分组
+    const checkinMap = {};
+    checkinsRes.data.forEach(row => {
+      if (!checkinMap[row.date]) checkinMap[row.date] = { date: row.date, attendees: [] };
+      checkinMap[row.date].attendees.push(row.name);
+    });
+
+    const data = {
+      members: MEMBERS,
+      checkins: Object.values(checkinMap),
+      draws: drawsRes.data.map(d => ({ date: d.date, winners: d.winners, pool: d.pool, count: d.count }))
+    };
+    if (!silent) { syncBar.className = 'sync-bar'; syncBar.style.display = 'none'; }
+    return data;
+  } catch(e) {
+    console.warn('loadData failed:', e);
+    if (!silent) {
+      syncBar.className = 'sync-bar error';
+      syncBar.textContent = '⚠️ 加载失败';
+      setTimeout(() => { syncBar.className = 'sync-bar'; syncBar.style.display = 'none'; }, 3000);
     }
-  } catch(e) { console.warn('loadData failed:', e); }
-  if (cachedData) return cachedData;
-  cachedData = { members: MEMBERS, checkins: [], draws: [] };
-  syncBar.className = 'sync-bar error';
-  syncBar.textContent = '⚠️ 加载失败';
-  setTimeout(() => { syncBar.className = 'sync-bar'; syncBar.style.display = 'none'; }, 3000);
-  return cachedData;
+    return appData;
+  }
 }
 
-async function saveData(data) {
-  cachedData = data;
+// 签到：直接 INSERT 一行，不会和别人冲突
+async function saveCheckin(date, name) {
   const syncBar = document.getElementById('syncBar');
   syncBar.textContent = '💾 保存中…';
   syncBar.className = 'sync-bar loading';
   syncBar.style.display = 'block';
   try {
-    const resp = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    const result = await resp.json();
-    if (resp.ok && result.success) {
-      syncBar.className = 'sync-bar';
-      syncBar.style.display = 'none';
-      return true;
-    }
+    const { error } = await db.from('checkins').upsert(
+      { date, name },
+      { onConflict: 'date,name', ignoreDuplicates: true }
+    );
+    syncBar.className = 'sync-bar';
+    syncBar.style.display = 'none';
+    if (error) throw error;
+    return true;
+  } catch(e) {
+    console.warn('saveCheckin failed:', e);
     syncBar.className = 'sync-bar error';
     syncBar.textContent = '⚠️ 保存失败';
     setTimeout(() => { syncBar.className = 'sync-bar'; syncBar.style.display = 'none'; }, 3000);
     return false;
+  }
+}
+
+// 保存抽奖结果
+async function saveDraw(date, winners, pool, count) {
+  const syncBar = document.getElementById('syncBar');
+  syncBar.textContent = '💾 保存中…';
+  syncBar.className = 'sync-bar loading';
+  syncBar.style.display = 'block';
+  try {
+    const { error } = await db.from('draws').insert({ date, winners, pool, count });
+    syncBar.className = 'sync-bar';
+    syncBar.style.display = 'none';
+    if (error) throw error;
+    return true;
   } catch(e) {
+    console.warn('saveDraw failed:', e);
     syncBar.className = 'sync-bar error';
-    syncBar.textContent = '⚠️ 网络错误';
+    syncBar.textContent = '⚠️ 保存失败';
     setTimeout(() => { syncBar.className = 'sync-bar'; syncBar.style.display = 'none'; }, 3000);
     return false;
   }
@@ -314,14 +348,19 @@ document.querySelectorAll('.tab').forEach(tab => {
     tab.classList.add('active');
     const panel = document.getElementById(tab.dataset.tab === 'lottery' ? 'lottery-panel' : tab.dataset.tab);
     if (panel) panel.classList.add('active');
-    if (tab.dataset.tab === 'checkin') renderCheckin();
-    if (tab.dataset.tab === 'records') renderRecords();
+    if (tab.dataset.tab === 'checkin') {
+      // 切换到签到页时拉取最新数据，确保能看到别人的签到
+      loadData(true).then(d => { if (d) appData = d; renderCheckin(); });
+    }
+    if (tab.dataset.tab === 'records') {
+      loadData(true).then(d => { if (d) appData = d; renderRecords(); });
+    }
     if (tab.dataset.tab === 'lottery') {
       // Reset lottery to idle state when switching tab
       clearInterval(lotInterval);
       lotState = 'idle';
       updateLotBtn('idle');
-      renderLotteryInfo();
+      loadData(true).then(d => { if (d) appData = d; renderLotteryInfo(); });
       startBubbles();
     }
   });
@@ -363,14 +402,14 @@ document.getElementById('dialogConfirm').addEventListener('click', async () => {
   const name = pendingName;
   document.getElementById('dialogOverlay').classList.remove('show');
 
-  let tc = appData.checkins.find(c => c.date === todayStr());
-  if (!tc) { tc = { date: todayStr(), attendees: [], note: '' }; appData.checkins.push(tc); }
-  if (!tc.attendees.includes(name)) { tc.attendees.push(name); }
-
-  showToast('💾 保存中…');
-  const ok = await saveData(appData);
-  if (ok) showToast(`${name} 签到成功！`);
-  else showToast('签到保存失败');
+  // 直接插入一条签到记录，不会覆盖别人的数据
+  const ok = await saveCheckin(todayStr(), name);
+  if (ok) {
+    showToast(`${name} 签到成功！`);
+    appData = await loadData(true);
+  } else {
+    showToast('签到保存失败');
+  }
   pendingName = null;
   renderCheckin();
 });
@@ -545,8 +584,9 @@ document.getElementById('lotteryBtn').addEventListener('click', async () => {
       // All done
       lotState = 'done';
       updateLotBtn('done');
-      appData.draws.push({ date: todayStr(), pool: getMonthlyPool(), winners: [...lotWinners], count: 3 });
-      await saveData(appData);
+      // 直接插入抽奖记录
+      await saveDraw(todayStr(), [...lotWinners], getMonthlyPool(), 3);
+      appData = await loadData(true);
       renderLotteryInfo();
       lotState = 'idle';
     }
@@ -607,6 +647,19 @@ async function init() {
   // Reset lottery state
   lotState = 'idle';
   updateLotBtn('idle');
+
+  // 每30秒自动刷新数据，让所有社员能实时看到彼此的签到状态
+  setInterval(async () => {
+    const fresh = await loadData(true);
+    if (fresh) {
+      appData = fresh;
+      // 只在签到页或记录页时刷新界面
+      const activeTab = document.querySelector('.tab.active');
+      if (activeTab && activeTab.dataset.tab === 'checkin') renderCheckin();
+      if (activeTab && activeTab.dataset.tab === 'records') renderRecords();
+      if (activeTab && activeTab.dataset.tab === 'lottery') renderLotteryInfo();
+    }
+  }, 30000);
 }
 init();
 </script>
