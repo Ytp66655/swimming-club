@@ -1,0 +1,30 @@
+name: Supabase Keepalive
+
+# 每天 UTC 03:00（北京时间 11:00）请求一次 Supabase
+# 保持免费版项目活跃，避免被自动 pause
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:  # 也支持手动触发
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          set -e
+          URL="https://fqsibxdlpithwrjqpdnp.supabase.co/rest/v1/checkins?select=id&limit=1"
+          KEY="sb_publishable_ndAQnv8n_7rwy8xn40PW7A_umLjS4A9"
+          echo "Pinging $URL"
+          HTTP_CODE=$(curl -s -o /tmp/resp.txt -w "%{http_code}" \
+            -H "apikey: $KEY" \
+            -H "Authorization: Bearer $KEY" \
+            "$URL")
+          echo "HTTP status: $HTTP_CODE"
+          cat /tmp/resp.txt
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Supabase ping failed with status $HTTP_CODE"
+            exit 1
+          fi
+          echo "✅ Supabase is alive"
