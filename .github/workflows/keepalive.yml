@@ -1,16 +1,24 @@
 name: Supabase Keepalive
 
-# 每天 UTC 03:00（北京时间 11:00）请求一次 Supabase
-# 保持免费版项目活跃，避免被自动 pause
+# 每天 UTC 03:00（北京时间 11:00）ping 一次 Supabase，保持免费项目活跃，避免闲置 7 天被自动 pause。
+# 同时每隔约 40 天自动提交一次 .keepalive 时间戳，避免仓库 60 天无活动导致 GitHub 自动禁用本定时任务。
 on:
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:  # 也支持手动触发
 
+permissions:
+  contents: write
+
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Ping Supabase REST API
         run: |
           set -e
@@ -27,4 +35,24 @@ jobs:
             echo "::error::Supabase ping failed with status $HTTP_CODE"
             exit 1
           fi
-          echo "✅ Supabase is alive"
+          echo "Supabase is alive"
+
+      - name: Keep repo active (prevent 60-day workflow auto-disable)
+        run: |
+          set -e
+          LAST=$(git log -1 --format=%ct -- .keepalive 2>/dev/null || echo 0)
+          if [ -z "$LAST" ]; then LAST=0; fi
+          NOW=$(date -u +%s)
+          AGE_DAYS=$(( (NOW - LAST) / 86400 ))
+          echo "Days since last keepalive commit: $AGE_DAYS"
+          if [ "$LAST" = "0" ] || [ "$AGE_DAYS" -ge 40 ]; then
+            date -u +"%Y-%m-%dT%H:%M:%SZ" > .keepalive
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .keepalive
+            git commit -m "chore: keepalive commit (auto) to keep scheduled workflow enabled"
+            git push
+            echo "Committed keepalive marker."
+          else
+            echo "No commit needed (< 40 days since last)."
+          fi
