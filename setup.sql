@@ -4,8 +4,9 @@ CREATE TABLE checkins (
   id BIGSERIAL PRIMARY KEY,
   date TEXT NOT NULL,
   name TEXT NOT NULL,
+  venue TEXT NOT NULL CHECK (venue IN ('上海游泳馆', '周浦游泳馆', '未标注场馆')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(date, name)
+  UNIQUE(date, name, venue)
 );
 
 -- 抽奖记录表
